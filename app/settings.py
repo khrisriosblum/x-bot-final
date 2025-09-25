@@ -35,6 +35,16 @@ class Settings(BaseSettings):
     # Web server port
     PORT: int = Field(default=int(os.getenv("PORT", "8000")))
 
+        # Facebook Page credentials
+        # The ID of the Facebook Page where posts should be published. Obtain this
+        # from the page’s About section or via the Graph API. Set via env var
+        # FB_PAGE_ID. If empty, Facebook publishing will be skipped.
+        FB_PAGE_ID: str = Field(default=os.getenv("FB_PAGE_ID", ""))
+        # Long‑lived Page access token with `pages_manage_posts` permission.
+        # Generate this in the Meta Developer portal and set via env var
+        # FB_PAGE_ACCESS_TOKEN. If empty, Facebook publishing will be skipped.
+        FB_PAGE_ACCESS_TOKEN: str = Field(default=os.getenv("FB_PAGE_ACCESS_TOKEN", ""))
+
     class Config:
         env_file = ".env"
         case_sensitive = False

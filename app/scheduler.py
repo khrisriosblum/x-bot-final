@@ -8,7 +8,7 @@ from apscheduler.triggers.date import DateTrigger
 from .settings import settings
 from .excel_loader import load_candidates
 from .queue_manager import select_candidate_for_slot, compose_text
-from .poster import post_to_x
+from .poster import post_to_x, post_to_facebook
 from .storage import storage
 
 router = APIRouter()
@@ -65,15 +65,47 @@ def execute_slot(run_id: int, slot_label: str, today: date, cands_sheet1, cands_
             return
 
         text = compose_text(cand)
-        # Post with pre-wait handled inside poster
-        result = post_to_x(text)
-        if result.get("status") in ("ok", "dry_run"):
-            storage.record_post(url=cand.url, sheet=cand.sheet, col=cand.col, row=cand.row, title=getattr(cand, "title", "") or (getattr(cand, "track_title","") or ""))
-            storage.update_run(run_id, status="success", executed_at=datetime.utcnow().isoformat(), selected_url=cand.url)
-            print(f"Posted ({result.get('status')}): {cand.url}")
-        else:
-            storage.update_run(run_id, status="error", executed_at=datetime.utcnow().isoformat(), selected_url=cand.url, error=result.get("error","unknown"))
-            print("Post error:", result.get("error"))
+            # Post to X (Twitter)
+            result_x = post_to_x(text)
+            # Post to Facebook. Use the same text; if needed, attach the
+            # candidate URL as link (for Sheet1 we already include the URL in
+            # the text). For simplicity we omit the link parameter here.
+            result_fb = post_to_facebook(text)
+
+            # Determine overall status. If either platform returns an "ok"
+            # status we consider the slot successful. Otherwise, record the error.
+            statuses = {result_x.get("status"), result_fb.get("status")}
+            if statuses.intersection({"ok", "dry_run"}):
+                # Record the post once to avoid duplicate dedup entries. We
+                # don't differentiate per platform because deduplication is
+                # based on the URL.
+                storage.record_post(
+                    url=cand.url,
+                    sheet=cand.sheet,
+                    col=cand.col,
+                    row=cand.row,
+                    title=getattr(cand, "title", "") or (getattr(cand, "track_title", "") or ""),
+                )
+                storage.update_run(
+                    run_id,
+                    status="success",
+                    executed_at=datetime.utcnow().isoformat(),
+                    selected_url=cand.url,
+                )
+                print(f"Posted (X: {result_x.get('status')}, FB: {result_fb.get('status')}): {cand.url}")
+            else:
+                error_msg = "; ".join([
+                    result_x.get("error") or "" if result_x.get("status") == "error" else "",
+                    result_fb.get("error") or "" if result_fb.get("status") == "error" else "",
+                ]).strip("; ")
+                storage.update_run(
+                    run_id,
+                    status="error",
+                    executed_at=datetime.utcnow().isoformat(),
+                    selected_url=cand.url,
+                    error=error_msg or "unknown",
+                )
+                print("Post error:", error_msg or "unknown")
     except Exception as e:
         storage.update_run(run_id, status="error", executed_at=datetime.utcnow().isoformat(), error=str(e))
         traceback.print_exc()
