@@ -47,6 +47,15 @@ Bot de X que publica **5 posts/día** (10:00, 13:00, 16:00, 19:00, 22:00) con **
    - O arranca con el Excel de ejemplo y luego **sustituye** el archivo por el tuyo.
 5. Configura **env vars secretas** de X:
    - `X_API_KEY`, `X_API_SECRET`, `X_ACCESS_TOKEN`, `X_ACCESS_SECRET`
+   
+   El bot utiliza la **API v2** de X mediante `tweepy.Client.create_tweet()`【290481613596620†L909-L975】,
+   por lo que ya **no hace llamadas a la API v1.1** (como `update_status`),
+   restringida a planes de pago en 2025. No es necesario un Bearer Token
+   adicional siempre y cuando suministres las cuatro credenciales de usuario;
+   Tweepy usará OAuth 1.0a con contexto de usuario para firmar las
+   peticiones. Asegúrate de que tu App en el portal de desarrolladores tenga
+   permisos de escritura y esté asociada a un proyecto para habilitar el
+   endpoint de publicación【187664688831490†L89-L94】.
 6. Inicialmente deja `DRY_RUN=true` y mira los logs en Render.
 7. Visita `/health`, `/queue`, `/history` para comprobar.
 
@@ -64,7 +73,7 @@ uvicorn app.main:app --reload
 app/
   excel_loader.py   # lee Excel y produce candidatos
   queue_manager.py  # selección por slot (prioriza recientes + reglas 19:00)
-  poster.py         # publica en X (tweepy), respeta wait de 15s
+  poster.py         # publica en X (tweepy v2), respeta wait de 15s
   scheduler.py      # planifica horas diarias con ±15m y jobs one-shot
   storage.py        # SQLite + historial
   settings.py       # configuración via env
