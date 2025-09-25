@@ -1,5 +1,5 @@
 
-# X Bot (Khris Rios / Blum Recordings)
+# X-bot-final (Khris Rios / Blum Recordings)
 
 Bot de X que publica **5 posts/día** (10:00, 13:00, 16:00, 19:00, 22:00) con **±15 min** aleatorio, a partir de un **Excel .xlsx** maestro.
 
